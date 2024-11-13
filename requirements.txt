@@ -1,0 +1,4 @@
+cryptography == 43.0.3
+faker == 32.1.0
+pandas == 2.2.3
+scikit-learn == 1.5.2
