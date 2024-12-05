@@ -5,10 +5,11 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from cryptography.fernet import Fernet
 from scipy import sparse
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+from encryptor import AESGCM4Encryptor
 
 
 class EncryptedMatcher:
@@ -23,7 +24,6 @@ class EncryptedMatcher:
         topn: int = 10,
         n_features: int = 2**20,
     ):
-        self._encryptor = Fernet(encryption_key)
         self._topn = -topn
 
         self._storage_path = Path(storage_path)
@@ -31,6 +31,7 @@ class EncryptedMatcher:
         self._database = self._setup_database()
         self._vectors = self._load_vectors()
 
+        self._encryptor = AESGCM4Encryptor(encryption_key, self.ENCODING)
         self._vectorizer = HashingVectorizer(
             encoding=self.ENCODING,
             n_features=n_features,
@@ -60,7 +61,7 @@ class EncryptedMatcher:
                 results.append(
                     {
                         "name": targets[target_index],
-                        "target": self._decrypt_data(match_data),
+                        "target": self._encryptor.decrypt(match_data),
                         "encrypted": match_data,
                         "similarity": float(similarities[target_index, match_index]),
                     }
@@ -94,7 +95,7 @@ class EncryptedMatcher:
 
     def _store_data(self, names):
         """Store encrypted data to SQLite."""
-        encrypted = names.map(self._encrypt_data).values.reshape(-1, 1)
+        encrypted = names.map(self._encryptor.encrypt).values.reshape(-1, 1)
         self._database.executemany(
             "INSERT INTO EncryptedData (MatchData) VALUES (?)", encrypted
         )
@@ -107,15 +108,6 @@ class EncryptedMatcher:
         else:
             self._vectors = vectors
         sparse.save_npz(self._storage_path / "vectors.npz", vectors)
-
-    def _encrypt_data(self, data):
-        """Encrypts data using Fernet encryption."""
-        return self._encryptor.encrypt(data.encode(self.ENCODING))
-
-    def _decrypt_data(self, data):
-        """Decrypts data using Fernet encryption."""
-        # Decode to string or leave as bytes?
-        return self._encryptor.decrypt(data).decode(self.ENCODING)
 
     def _setup_database(self):
         """Sets up the SQLite database."""
