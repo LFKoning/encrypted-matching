@@ -40,68 +40,6 @@ class EncryptedMatcher:
             strip_accents="ascii",
         )
 
-    def _setup_database(self):
-        """Sets up the SQLite database."""
-        database = sqlite3.connect(self._storage_path / "encrypted.db")
-        database.execute(
-            """
-            CREATE TABLE IF NOT EXISTS EncryptedData (
-                MatchIndex INTEGER PRIMARY KEY,
-                MatchData BLOB
-            );
-            """
-        )
-        database.commit()
-        return database
-
-    def _load_vectors(self):
-        """Load stored vectors."""
-        try:
-            return sparse.load_npz(self._storage_path / "vectors.npz")
-        except FileNotFoundError:
-            return None
-
-    def _store_vectors(self, vectors):
-        """Store vectors to disk."""
-        if self._vectors is not None:
-            self._vectors = sparse.vstack([self._vectors, vectors])
-        else:
-            self._vectors = vectors
-        sparse.save_npz(self._storage_path / "vectors.npz", vectors)
-
-    def _search_data(self, indices):
-        """Retrieve encrypted data from SQLite."""
-        query = """
-            SELECT
-                MatchIndex - 1 AS MatchedIndex,
-                MatchData
-            FROM EncryptedData
-            WHERE MatchIndex IN (%s)
-        """
-        query = query % ", ".join("?" * len(indices))
-
-        # MatchIndex starts at 1 and need to convert to list.
-        indices = [int(i + 1) for i in indices]
-        result = self._database.execute(query, indices)
-        return result.fetchall()
-
-    def _store_data(self, names):
-        """Store encrypted data to SQLite."""
-        encrypted = names.map(self._encrypt_data).values.reshape(-1, 1)
-        self._database.executemany(
-            "INSERT INTO EncryptedData (MatchData) VALUES (?)", encrypted
-        )
-        self._database.commit()
-
-    def _encrypt_data(self, data):
-        """Encrypts data using Fernet encryption."""
-        return self._encryptor.encrypt(data.encode(self.ENCODING))
-
-    def _decrypt_data(self, data):
-        """Decrypts data using Fernet encryption."""
-        # Decode to string or leave as bytes?
-        return self._encryptor.decrypt(data).decode(self.ENCODING)
-
     def add_names(self, names: pd.Series):
         """Store encrypted and vectorized names."""
         self._store_data(names)
@@ -124,10 +62,71 @@ class EncryptedMatcher:
                         "name": targets[target_index],
                         "target": self._decrypt_data(match_data),
                         "encrypted": match_data,
-                        "similarity": float(
-                            similarities[target_index, match_index]
-                        ),
+                        "similarity": float(similarities[target_index, match_index]),
                     }
                 )
 
+        results = sorted(results, key=lambda m: m["similarity"], reverse=True)
         return results
+
+    def _search_data(self, indices):
+        """Retrieve encrypted data from SQLite."""
+        query = """
+            SELECT
+                MatchIndex - 1 AS MatchedIndex,
+                MatchData
+            FROM EncryptedData
+            WHERE MatchIndex IN (%s)
+        """
+        query = query % ", ".join("?" * len(indices))
+
+        # MatchIndex starts at 1 and need to convert to list.
+        indices = [int(i + 1) for i in indices]
+        result = self._database.execute(query, indices)
+        return result.fetchall()
+
+    def _load_vectors(self):
+        """Load stored vectors."""
+        try:
+            return sparse.load_npz(self._storage_path / "vectors.npz")
+        except FileNotFoundError:
+            return None
+
+    def _store_data(self, names):
+        """Store encrypted data to SQLite."""
+        encrypted = names.map(self._encrypt_data).values.reshape(-1, 1)
+        self._database.executemany(
+            "INSERT INTO EncryptedData (MatchData) VALUES (?)", encrypted
+        )
+        self._database.commit()
+
+    def _store_vectors(self, vectors):
+        """Store vectors to disk."""
+        if self._vectors is not None:
+            self._vectors = sparse.vstack([self._vectors, vectors])
+        else:
+            self._vectors = vectors
+        sparse.save_npz(self._storage_path / "vectors.npz", vectors)
+
+    def _encrypt_data(self, data):
+        """Encrypts data using Fernet encryption."""
+        return self._encryptor.encrypt(data.encode(self.ENCODING))
+
+    def _decrypt_data(self, data):
+        """Decrypts data using Fernet encryption."""
+        # Decode to string or leave as bytes?
+        return self._encryptor.decrypt(data).decode(self.ENCODING)
+
+    def _setup_database(self):
+        """Sets up the SQLite database."""
+        database = sqlite3.connect(self._storage_path / "encrypted.db")
+        database.execute(
+            """
+            CREATE TABLE IF NOT EXISTS EncryptedData (
+                MatchIndex INTEGER PRIMARY KEY,
+                MatchData BLOB
+            );
+            """
+        )
+        database.commit()
+        return database
