@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from storage import EncryptedStore, VectorStore
+from fuzzy_matching.storage import EncryptedStore, VectorStore
 
 
 class VectorMatcher:

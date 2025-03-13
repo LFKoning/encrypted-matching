@@ -7,7 +7,7 @@ from pathlib import Path
 import pandas as pd
 from scipy import sparse
 
-from encryption import AESGCM4Encryptor
+from fuzzy_matching.encryption import AESGCM4Encryptor
 
 
 class Storage:

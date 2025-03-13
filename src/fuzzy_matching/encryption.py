@@ -12,13 +12,11 @@ class BaseEncryptor:
     _encrypt_class = NotImplemented
 
     def __init__(self, key: bytes) -> None:
-        # pylint: disable=not-callable
         self._encryptor = self._encrypt_class(key)
 
     @classmethod
     def generate_key(cls) -> bytes:
         """Generate a compatible encryption key."""
-        # pylint: disable=no-member
         return cls._encrypt_class.generate_key()
 
     def encrypt(self, value: bytes) -> bytes:

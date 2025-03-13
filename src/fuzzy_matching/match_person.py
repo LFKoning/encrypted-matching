@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from match_edits import DistanceMatcher
-from match_vector import VectorMatcher
+from fuzzy_matching.match_edits import DistanceMatcher
+from fuzzy_matching.match_vector import VectorMatcher
 
 
 class PersonMatcher:
@@ -27,7 +27,9 @@ class PersonMatcher:
         Folder to store data in.
     """
 
-    def __init__(self, top_n, config, encryption_key: str, storage_path="storage") -> None:
+    def __init__(
+        self, top_n, config, encryption_key: str, storage_path="storage"
+    ) -> None:
         # Create the storage path if needed.
         storage_path = Path(storage_path)
         storage_path.mkdir(parents=True, exist_ok=True)

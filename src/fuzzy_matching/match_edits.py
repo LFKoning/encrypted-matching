@@ -6,7 +6,7 @@ import pandas as pd
 from rapidfuzz.distance.OSA import normalized_similarity
 from rapidfuzz.process import cdist
 
-from storage import EncryptedStore
+from fuzzy_matching.storage import EncryptedStore
 
 
 class DistanceMatcher:

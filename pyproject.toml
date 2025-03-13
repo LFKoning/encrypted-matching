@@ -1,0 +1,56 @@
+[project]
+name = "fuzzy-matching"
+version = "0.0.1"
+
+# Optional descriptive information for the project.
+description = "Fuzzy matching on multiple columns with encryption."
+keywords = ["fuzzy matching", "matching", "ranking", "multi-column", "encryption"]
+readme = "README.md"
+
+# Fill in authors and maintainers here.
+authors = [
+    {name = "Lukas Koning", email = "lukas.koning@afm.nl"},
+]
+maintainers = [
+    {name = "Lukas Koning", email = "lukas.koning@afm.nl"},
+]
+
+# Optional classifications.
+# See: https://pypi.org/classifiers/
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+# Python version and dependencies
+requires-python = ">=3.10"
+dependencies = [
+    "cryptography ~= 43.0.3",
+    "pandas ~= 2.2.3",
+    "rapidfuzz ~= 3.12.1",
+    "scikit-learn ~= 1.5.2",
+]
+
+[project.optional-dependencies]
+# Regular development dependencies.
+dev = [
+    "ruff >= 0.9.10",
+]
+
+[project.urls]
+# URL to the repository.
+repository = "https://github.com/LFKoning/encrypted-matching"
+
+[build-system]
+# Using setuptools as build backend.
+requires = ["setuptools >= 76.0.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+# Place package source code in src folder.
+where = ["src"]
