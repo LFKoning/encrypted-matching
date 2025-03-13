@@ -17,6 +17,8 @@ class PersonMatcher:
 
     Parameters
     ----------
+    top_n : int
+        Number of results to return.
     config : dict
         Dict specifying field name and matching algoritm.
     encryption_key : str
@@ -25,11 +27,12 @@ class PersonMatcher:
         Folder to store data in.
     """
 
-    def __init__(self, config, encryption_key: str, storage_path="storage") -> None:
+    def __init__(self, top_n, config, encryption_key: str, storage_path="storage") -> None:
         # Create the storage path if needed.
         storage_path = Path(storage_path)
         storage_path.mkdir(parents=True, exist_ok=True)
 
+        self._top_n = top_n
         self._weights = {
             field: settings["weight"] for field, settings in config.items()
         }
@@ -79,6 +82,10 @@ class PersonMatcher:
         similarity = pd.Series(0, index=results.index)
         for field, weight in self._weights.items():
             similarity += results[f"similarity_{field}"] * weight
+
+        similarity = similarity.nlargest(self._top_n)
+        results = results.loc[similarity.index, :]
+
         results = results.assign(similarity=similarity)
 
         return results
