@@ -44,7 +44,7 @@ dev = [
 
 [project.urls]
 # URL to the repository.
-repository = "https://github.com/LFKoning/encrypted-matching"
+repository = "https://github.com/LFKoning/fuzzy-matching"
 
 [build-system]
 # Using setuptools as build backend.
