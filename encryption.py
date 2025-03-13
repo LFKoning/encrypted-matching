@@ -11,10 +11,9 @@ class BaseEncryptor:
 
     _encrypt_class = NotImplemented
 
-    def __init__(self, key: bytes, encoding="utf8") -> None:
+    def __init__(self, key: bytes) -> None:
         # pylint: disable=not-callable
         self._encryptor = self._encrypt_class(key)
-        self._encoding = encoding
 
     @classmethod
     def generate_key(cls) -> bytes:
@@ -22,13 +21,13 @@ class BaseEncryptor:
         # pylint: disable=no-member
         return cls._encrypt_class.generate_key()
 
-    def encrypt(self, value: str) -> bytes:
+    def encrypt(self, value: bytes) -> bytes:
         """Encrypt a series of values."""
-        return value.encode(self._encoding)
+        return value
 
-    def decrypt(self, value: bytes) -> str:
+    def decrypt(self, value: bytes) -> bytes:
         """Decrypt a series of values."""
-        return value.decode(self._encoding)
+        return value
 
 
 class FernetEncryptor(BaseEncryptor):
@@ -43,12 +42,12 @@ class FernetEncryptor(BaseEncryptor):
     _encrypt_class = Fernet
 
     def encrypt(self, value: str) -> bytes:
-        """Encrypt a value using Fernet encryption."""
-        return self._encryptor.encrypt(value.encode(self._encoding))
+        """Encrypt bytes using Fernet encryption."""
+        return self._encryptor.encrypt(value)
 
     def decrypt(self, value: bytes) -> str:
-        """Encrypt a value using Fernet encryption."""
-        return self._encryptor.decrypt(value).decode(self._encoding)
+        """Encrypt bytes using Fernet encryption."""
+        return self._encryptor.decrypt(value)
 
 
 class AESGCM4Encryptor(BaseEncryptor):
@@ -80,16 +79,16 @@ class AESGCM4Encryptor(BaseEncryptor):
         """
         return AESGCM.generate_key(bit_length=bit_length)
 
-    def encrypt(self, value: str) -> bytes:
-        """Encrypt a string value using AES-GCM IV encryption."""
+    def encrypt(self, value: bytes) -> bytes:
+        """Encrypt bytes using AES-GCM IV encryption."""
         # Generate a 12 byte nonce.
         # Not garantueed to be unique!
         nonce = token_bytes(12)
-        cypher = self._encryptor.encrypt(nonce, value.encode(self._encoding), b"")
+        cypher = self._encryptor.encrypt(nonce, value, b"")
         return nonce + cypher
 
-    def decrypt(self, value: bytes) -> str:
-        """Decrypt a string value using AES-GCM IV encryption."""
+    def decrypt(self, value: bytes) -> bytes:
+        """Decrypt bytes using AES-GCM IV encryption."""
         # Get the nonce and then decrypt.
         nonce = value[0:12]
-        return self._encryptor.decrypt(nonce, value[12:], b"").decode(self._encoding)
+        return self._encryptor.decrypt(nonce, value[12:], b"")

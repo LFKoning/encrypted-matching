@@ -1,4 +1,4 @@
-"""Module for fuzzy matching large sets of encypted data."""
+"""Module for fuzzy matching using cosine similarity between vectors."""
 
 import sqlite3
 from pathlib import Path
@@ -12,8 +12,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from encryptor import AESGCM4Encryptor
 
 
-class EncryptedMatcher:
-    """Fuzzy matching for large sets of encrypted data."""
+class VectorMatcher:
+    """Fuzzy matching using cosine similaroty between vectors."""
 
     ENCODING = "utf8"
 
@@ -108,17 +108,3 @@ class EncryptedMatcher:
         else:
             self._vectors = vectors
         sparse.save_npz(self._storage_path / "vectors.npz", vectors)
-
-    def _setup_database(self):
-        """Sets up the SQLite database."""
-        database = sqlite3.connect(self._storage_path / "encrypted.db")
-        database.execute(
-            """
-            CREATE TABLE IF NOT EXISTS EncryptedData (
-                MatchIndex INTEGER PRIMARY KEY,
-                MatchData BLOB
-            );
-            """
-        )
-        database.commit()
-        return database
