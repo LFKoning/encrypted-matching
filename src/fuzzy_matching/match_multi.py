@@ -1,4 +1,4 @@
-"""Module for fuzzy matching of personal data."""
+"""Module for fuzzy matching on multiple characteristics."""
 
 import re
 import string
@@ -8,12 +8,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from fuzzy_matching.match_edits import DistanceMatcher
+from fuzzy_matching.match_distance import DistanceMatcher
 from fuzzy_matching.match_vector import VectorMatcher
 
 
-class PersonMatcher:
-    """Class for fuzzy matching of personal data.
+class MultiMatcher:
+    """Fuzzy matching on multiple characteristics.
 
     Parameters
     ----------
@@ -56,7 +56,7 @@ class PersonMatcher:
                 raise TypeError(f"Unknown matching algoritm: {algoritm}")
 
     def create(self, data) -> None:
-        """Add personal data to the matching set."""
+        """Add data to the matching set."""
         missing = set(self._matchers) - set(data.columns)
         if missing:
             raise RuntimeError("Missing fields in the data: " + ".".join(missing))
@@ -68,7 +68,7 @@ class PersonMatcher:
             matcher.create(uuids, prep_data)
 
     def get(self, target: dict) -> pd.DataFrame:
-        """Match a person from the matching set."""
+        """Match records from the matching set."""
         results = None
 
         # Get similarity scores from the individual matchers.
@@ -91,6 +91,11 @@ class PersonMatcher:
         results = results.assign(similarity=similarity)
 
         return results
+
+    def delete(self) -> None:
+        """Delete all matching data."""
+        for field, matcher in self._matchers.items():
+            matcher.delete(field)
 
     def _preprocess(self, value: str) -> str:
         """Preprocess text values."""

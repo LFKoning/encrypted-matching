@@ -54,3 +54,8 @@ class VectorMatcher:
         # Load the encrypted values.
         values = self._value_store.retrieve()
         return values.assign(**{f"similarity_{self._field}": similarities})
+
+    def delete(self, field) -> None:
+        """Delete all matching data for the field."""
+        self._vector_store.delete()
+        self._value_store.delete()

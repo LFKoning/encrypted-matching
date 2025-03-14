@@ -46,3 +46,8 @@ class DistanceMatcher:
             workers=-1,
         )
         return data.assign(**{f"similarity_{self._field}": similarities[0]})
+
+    def delete(self, field) -> None:
+        """Delete all matching data for the field."""
+        self._storage.delete()
+

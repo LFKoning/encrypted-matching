@@ -20,7 +20,7 @@ class Storage:
         field = "".join(
             [char for char in field if char in string.ascii_lowercase + "_-"]
         )
-        return f"{field}.{extension}"
+        return f"storage_{field}.{extension}"
 
 
 class EncryptedStore(Storage):
@@ -50,14 +50,22 @@ class EncryptedStore(Storage):
         with open(self._storage_file, "wb") as data_file:
             data_file.write(data)
 
+    def delete(self) -> None:
+        """Delete all stored data."""
+        try:
+            self._storage_file.unlink()
+        except FileNotFoundError:
+            pass
+
     def _load(self) -> pd.DataFrame | None:
         """Load and decrypt the data."""
         try:
             with open(self._storage_file, "rb") as data_file:
-                raw_data = io.BytesIO(data_file.read())
+                raw_data = data_file.read()
 
             raw_data = self._encryptor.decrypt(raw_data)
 
+            raw_data = io.BytesIO(raw_data)
             return pd.read_pickle(raw_data)
 
         except FileNotFoundError:
@@ -82,6 +90,13 @@ class VectorStore(Storage):
         else:
             self._data = vectors
         sparse.save_npz(self._storage_file, self._data)
+
+    def delete(self) -> None:
+        """Delete all stored data."""
+        try:
+            self._storage_file.unlink()
+        except FileNotFoundError:
+            pass
 
     def _load(self) -> sparse.csr_matrix | None:
         """Load vectors from disk."""
