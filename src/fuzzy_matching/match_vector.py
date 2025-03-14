@@ -51,7 +51,7 @@ class VectorMatcher:
         values = self._value_store.retrieve()
         if values is None:
             return None
-        values.index = values["uuid"]
+        values = values.set_index("uuid")
 
         # Compute vector similarities.
         target_vector = self._vectorizer.fit_transform([target])

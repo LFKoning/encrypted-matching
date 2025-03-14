@@ -39,7 +39,7 @@ class DistanceMatcher:
         values = self._storage.retrieve()
         if values is None:
             return None
-        values.index = values["uuid"]
+        values = values.set_index("uuid")
 
         similarities = cdist(
             [target],
