@@ -1,6 +1,7 @@
 """Module for fuzzy matching using cosine similarity between vectors."""
 
 from pathlib import Path
+from typing import Tuple
 
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -44,16 +45,21 @@ class VectorMatcher:
         vectors = self._vectorizer.fit_transform(values)
         self._vector_store.store(vectors)
 
-    def get(self, target: str) -> pd.DataFrame:
+    def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series] :
         """Search names in the vector space."""
+        # Load the encrypted values.
+        values = self._value_store.retrieve()
+        if values is None:
+            return None
+        values.index = values["uuid"]
+
         # Compute vector similarities.
         target_vector = self._vectorizer.fit_transform([target])
         vectors = self._vector_store.retrieve()
         similarities = cosine_similarity(target_vector, vectors)[0]
+        similarities = pd.Series(similarities, index=values.index)
 
-        # Load the encrypted values.
-        values = self._value_store.retrieve()
-        return values.assign(**{f"similarity_{self._field}": similarities})
+        return values, similarities
 
     def delete(self, field) -> None:
         """Delete all matching data for the field."""

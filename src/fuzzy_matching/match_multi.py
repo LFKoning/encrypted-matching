@@ -69,28 +69,26 @@ class MultiMatcher:
 
     def get(self, target: dict) -> pd.DataFrame:
         """Match records from the matching set."""
-        results = None
+        results = []
+        similarities = None
 
         # Get similarity scores from the individual matchers.
         for field, matcher in self._matchers.items():
             prep_target = self._preprocess(target[field])
-            result = matcher.get(prep_target)
-            if results is None:
-                results = result
+            values, similarity = matcher.get(prep_target)
+
+            results.append(values)
+
+            if similarities is None:
+                similarities = similarity * self._weights[field]
             else:
-                results = results.merge(result, on="uuid", how="left")
+                similarities += similarity * self._weights[field]
 
-        # Aggragate similarity scores across fields.
-        similarity = pd.Series(0, index=results.index)
-        for field, weight in self._weights.items():
-            similarity += results[f"similarity_{field}"] * weight
+        top_similar = similarities.nlargest(self._top_n)
+        results = [result.loc[top_similar.index, :] for result in results]
+        results = pd.concat(results, axis=1)
 
-        similarity = similarity.nlargest(self._top_n)
-        results = results.loc[similarity.index, :]
-
-        results = results.assign(similarity=similarity)
-
-        return results
+        return results.assign(similarity=top_similar)
 
     def delete(self) -> None:
         """Delete all matching data."""
