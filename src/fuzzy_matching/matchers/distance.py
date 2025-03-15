@@ -7,10 +7,11 @@ import pandas as pd
 from rapidfuzz.distance.OSA import normalized_similarity
 from rapidfuzz.process import cdist
 
+from .base_string import StringMatcher
 from fuzzy_matching.storage import EncryptedStore
 
 
-class DistanceMatcher:
+class DistanceMatcher(StringMatcher):
     """Module for fuzzy matching using edit distances."""
 
     def __init__(
@@ -24,6 +25,10 @@ class DistanceMatcher:
 
     def create(self, uuids: pd.Series, values: pd.Series) -> None:
         """Add values to the matching set, return a list of UUIDs."""
+        # Perform basic data preprocessing.
+        values = values.map(self._preprocess)
+
+        # Store values with UUIDs and name.
         values.index = uuids
         values.name = self._field
         self._storage.store(values)
@@ -33,6 +38,8 @@ class DistanceMatcher:
         values = self._storage.retrieve()
         if values is None:
             return None, None
+
+        target = self._preprocess(target)
 
         similarities = cdist(
             [target],

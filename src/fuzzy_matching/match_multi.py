@@ -1,8 +1,5 @@
 """Module for fuzzy matching on multiple characteristics."""
 
-import re
-import string
-import unicodedata
 import uuid
 from pathlib import Path
 
@@ -65,8 +62,7 @@ class MultiMatcher:
         uuids = pd.Series([self._make_id() for _ in range(len(data))])
 
         for field, matcher in self._matchers.items():
-            prep_data = data[field].map(self._preprocess)
-            matcher.create(uuids, prep_data)
+            matcher.create(uuids, data[field])
 
     def get(self, target: dict) -> pd.DataFrame:
         """Match records from the matching set."""
@@ -75,8 +71,7 @@ class MultiMatcher:
 
         # Get similarity scores from the individual matchers.
         for field, matcher in self._matchers.items():
-            prep_target = self._preprocess(target[field])
-            values, similarity = matcher.get(prep_target)
+            values, similarity = matcher.get(target[field])
 
             if values is None:
                 raise RuntimeError(f"No results for {field}; aborting...")
@@ -98,36 +93,6 @@ class MultiMatcher:
         """Delete all matching data."""
         for field, matcher in self._matchers.items():
             matcher.delete(field)
-
-    def _preprocess(self, value: str) -> str:
-        """Preprocess text values."""
-        functions = [
-            str.lower,
-            self._string_normalize,
-            self._strip_puntuation,
-            self._clean_whitespace,
-            str.strip,
-        ]
-
-        for function in functions:
-            value = function(value)
-
-        return value
-
-    @staticmethod
-    def _clean_whitespace(value: str) -> str:
-        """Replace whitespace for a single space."""
-        return re.sub(r"\s+", " ", value)
-
-    @staticmethod
-    def _string_normalize(value: str) -> str:
-        """Normalize special unicode characters."""
-        return unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
-
-    @staticmethod
-    def _strip_puntuation(value: str) -> str:
-        """Replace punctuation by whitespace."""
-        return "".join(c if c not in string.punctuation else " " for c in value)
 
     @staticmethod
     def _make_id() -> str:

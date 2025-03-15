@@ -7,10 +7,11 @@ import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
+from .base_string import StringMatcher
 from fuzzy_matching.storage import EncryptedStore, VectorStore
 
 
-class VectorMatcher:
+class VectorMatcher(StringMatcher):
     """Fuzzy matching using cosine similarity between vectors."""
 
     def __init__(
@@ -31,8 +32,11 @@ class VectorMatcher:
         )
 
     def create(self, uuids: pd.Series, values: pd.Series) -> None:
-        """Store encrypted and vectorized names."""
-        # Store values
+        """Store encrypted and vectorized values."""
+        # Perform basic data preprocessing.
+        values = values.map(self._preprocess)
+
+        # Store values with UUIDs and name.
         values.index = uuids
         values.name = self._field
         self._value_store.store(values)
@@ -42,11 +46,13 @@ class VectorMatcher:
         self._vector_store.store(vectors)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
-        """Search names in the vector space."""
+        """Search values in the vector space."""
         # Load the encrypted values.
         values = self._value_store.retrieve()
         if values is None:
             return None, None
+
+        target = self._preprocess(target)
 
         # Compute vector similarities.
         target_vector = self._vectorizer.fit_transform([target])
