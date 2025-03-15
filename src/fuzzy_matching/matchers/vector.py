@@ -56,7 +56,7 @@ class VectorMatcher:
 
         return values, similarities
 
-    def delete(self, field) -> None:
+    def delete(self) -> None:
         """Delete all matching data for the field."""
         self._vector_store.delete()
         self._value_store.delete()

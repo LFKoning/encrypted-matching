@@ -13,8 +13,6 @@ from fuzzy_matching.storage import EncryptedStore
 class DistanceMatcher:
     """Module for fuzzy matching using edit distances."""
 
-    ENCODING = "utf8"
-
     def __init__(
         self,
         field: str,
@@ -46,6 +44,6 @@ class DistanceMatcher:
 
         return values, similarities
 
-    def delete(self, field) -> None:
+    def delete(self) -> None:
         """Delete all matching data for the field."""
         self._storage.delete()

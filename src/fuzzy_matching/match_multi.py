@@ -8,8 +8,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from fuzzy_matching.match_distance import DistanceMatcher
-from fuzzy_matching.match_vector import VectorMatcher
+from fuzzy_matching.matchers import DistanceMatcher, VectorMatcher, NullMatcher
 
 
 class MultiMatcher:
@@ -36,7 +35,7 @@ class MultiMatcher:
 
         self._top_n = top_n
         self._weights = {
-            field: settings["weight"] for field, settings in config.items()
+            field: settings.get("weight", 1.0) for field, settings in config.items()
         }
 
         self._matchers = {}
@@ -51,6 +50,8 @@ class MultiMatcher:
                 self._matchers[field] = VectorMatcher(
                     field, encryption_key, storage_path
                 )
+            elif algoritm == "null":
+                self._matchers[field] = NullMatcher(field, encryption_key, storage_path)
 
             else:
                 raise TypeError(f"Unknown matching algoritm: {algoritm}")
