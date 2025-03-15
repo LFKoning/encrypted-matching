@@ -31,11 +31,11 @@ class EncryptedStore(Storage):
         self._encryptor = AESGCM4Encryptor(encryption_key)
         self._data = self._load()
 
-    def retrieve(self) -> pd.DataFrame | None:
-        """Return data as a DataFrame."""
+    def retrieve(self) -> pd.Series | None:
+        """Return encrypted data as a pandas Series."""
         return self._data
 
-    def store(self, values: pd.DataFrame) -> None:
+    def store(self, values: pd.Series) -> None:
         """Encrypt and store the data."""
         if self._data is None:
             self._data = values
@@ -57,7 +57,7 @@ class EncryptedStore(Storage):
         except FileNotFoundError:
             pass
 
-    def _load(self) -> pd.DataFrame | None:
+    def _load(self) -> pd.Series | None:
         """Load and decrypt the data."""
         try:
             with open(self._storage_file, "rb") as data_file:
@@ -69,6 +69,7 @@ class EncryptedStore(Storage):
             return pd.read_pickle(raw_data)
 
         except FileNotFoundError:
+            print(f"Warning: Cannot find file {self._storage_file}")
             return None
 
 
@@ -103,4 +104,5 @@ class VectorStore(Storage):
         try:
             return sparse.load_npz(self._storage_file)
         except FileNotFoundError:
+            print(f"Warning: Cannot find file {self._storage_file}")
             return None

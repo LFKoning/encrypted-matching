@@ -77,6 +77,9 @@ class MultiMatcher:
             prep_target = self._preprocess(target[field])
             values, similarity = matcher.get(prep_target)
 
+            if values is None:
+                raise RuntimeError(f"No results for {field}; aborting...")
+
             results.append(values)
 
             if similarities is None:
@@ -85,7 +88,7 @@ class MultiMatcher:
                 similarities += similarity * self._weights[field]
 
         top_similar = similarities.nlargest(self._top_n)
-        results = [result.loc[top_similar.index, :] for result in results]
+        results = [result[top_similar.index] for result in results]
         results = pd.concat(results, axis=1)
 
         return results.assign(similarity=top_similar)

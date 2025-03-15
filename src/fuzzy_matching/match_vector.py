@@ -32,26 +32,21 @@ class VectorMatcher:
 
     def create(self, uuids: pd.Series, values: pd.Series) -> None:
         """Store encrypted and vectorized names."""
-        # Store the values.
-        data = pd.DataFrame(
-            {
-                "uuid": uuids,
-                self._field: values,
-            }
-        )
-        self._value_store.store(data)
+        # Store values
+        values.index = uuids
+        values.name = self._field
+        self._value_store.store(values)
 
         # Convert to vectors and store.
         vectors = self._vectorizer.fit_transform(values)
         self._vector_store.store(vectors)
 
-    def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series] :
+    def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Search names in the vector space."""
         # Load the encrypted values.
         values = self._value_store.retrieve()
         if values is None:
-            return None
-        values = values.set_index("uuid")
+            return None, None
 
         # Compute vector similarities.
         target_vector = self._vectorizer.fit_transform([target])

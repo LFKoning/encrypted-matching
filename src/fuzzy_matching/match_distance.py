@@ -26,24 +26,19 @@ class DistanceMatcher:
 
     def create(self, uuids: pd.Series, values: pd.Series) -> None:
         """Add values to the matching set, return a list of UUIDs."""
-        values = pd.DataFrame(
-            {
-                "uuid": uuids,
-                self._field: values,
-            }
-        )
+        values.index = uuids
+        values.name = self._field
         self._storage.store(values)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Match the target, return scores for the matching set."""
         values = self._storage.retrieve()
         if values is None:
-            return None
-        values = values.set_index("uuid")
+            return None, None
 
         similarities = cdist(
             [target],
-            values[self._field],
+            values,
             scorer=normalized_similarity,
             workers=-1,
         )
@@ -54,4 +49,3 @@ class DistanceMatcher:
     def delete(self, field) -> None:
         """Delete all matching data for the field."""
         self._storage.delete()
-
