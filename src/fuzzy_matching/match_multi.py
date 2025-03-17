@@ -43,9 +43,9 @@ class MultiMatcher:
         self._matchers = {}
         for field, settings in config.items():
             algoritm = settings.get("algoritm").lower()
-            if algoritm == "distance":
+            if algoritm in DistanceMatcher.ALGORITMS:
                 self._matchers[field] = DistanceMatcher(
-                    field, encryption_key, storage_path
+                    field, encryption_key, storage_path, algoritm
                 )
 
             elif algoritm == "vector":

@@ -4,7 +4,10 @@ from pathlib import Path
 from typing import Tuple
 
 import pandas as pd
-from rapidfuzz.distance.OSA import normalized_similarity
+
+from rapidfuzz.distance.Levenshtein import normalized_similarity as levenshtein
+from rapidfuzz.distance.DamerauLevenshtein import normalized_similarity as damerau
+from rapidfuzz.distance.OSA import normalized_similarity as optimal_alignment
 from rapidfuzz.process import cdist
 
 from .base_string import StringMatcher
@@ -14,12 +17,26 @@ from fuzzy_matching.storage import EncryptedStore
 class DistanceMatcher(StringMatcher):
     """Module for fuzzy matching using edit distances."""
 
+    ALGORITMS = {
+        "levenshtein": levenshtein,
+        "damerau": damerau,
+        "alignment": optimal_alignment,
+    }
+
     def __init__(
         self,
         field: str,
         encryption_key: bytes,
         storage_path: Path,
+        algoritm: str,
     ) -> None:
+        if algoritm.lower() not in self.ALGORITMS:
+            raise ValueError(
+                f"Unknown distance algoritm: {algoritm}."
+                "Valid options are: " + ", ".join(self.ALGORITMS)
+            )
+
+        self._algoritm = self.ALGORITMS[algoritm]
         self._field = field
         self._storage = EncryptedStore(field, encryption_key, storage_path)
 
@@ -44,7 +61,7 @@ class DistanceMatcher(StringMatcher):
         similarities = cdist(
             [target],
             values,
-            scorer=normalized_similarity,
+            scorer=self._algoritm,
             workers=-1,
         )
         similarities = pd.Series(similarities[0], index=values.index)
