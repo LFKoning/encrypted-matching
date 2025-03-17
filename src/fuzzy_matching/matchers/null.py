@@ -20,21 +20,18 @@ class NullMatcher:
         self._field = field
         self._storage = EncryptedStore(field, encryption_key, storage_path)
 
-    def create(self, uuids: pd.Series, values: pd.Series) -> None:
+    def create(self, data: pd.DataFrame) -> None:
         """Add values to the matching set, return a list of UUIDs."""
-        values.index = uuids
-        values.name = self._field
-        self._storage.store(values)
+        self._storage.store(data)
 
     def get(self, _: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Match the target, return scores for the matching set."""
-        values = self._storage.retrieve()
-        if values is None:
-            return None, None
+        data = self._storage.retrieve()
+        if data is None:
+            return None
 
-        similarities = pd.Series(0, index=values.index)
-
-        return values, similarities
+        data = data.assign(**{f"similarity_{self._field}": 0})
+        return data.set_index("id")
 
     def delete(self) -> None:
         """Delete all matching data for the field."""

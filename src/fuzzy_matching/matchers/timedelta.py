@@ -13,39 +13,38 @@ class TimedeltaMatcher:
 
     def __init__(
         self,
-        field,
+        field: str,
+        weight: float,
         encryption_key: bytes,
         storage_path: Path,
         date_format: str,
     ):
         self._field = field
+        self._weight = weight
         self._format = date_format
         self._storage = EncryptedStore(field, encryption_key, storage_path)
 
-    def create(self, uuids: pd.Series, values: pd.Series) -> None:
+    def create(self, data) -> None:
         """Store encrypted datetime values."""
-        values = pd.to_datetime(values, format=self._format)
-
-        # Store datetime values.
-        values.index = uuids
-        values.name = self._field
-        self._storage.store(values)
+        data = data.assign(
+            **{self._field: pd.to_datetime(data[self._field], format=self._format)}
+        )
+        self._storage.store(data)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Search names in the vector space."""
-        # Load the encrypted values.
-        values = self._storage.retrieve()
-        if values is None:
-            return None, None
+        data = self._storage.retrieve()
+        if data is None:
+            return None
 
         target = pd.to_datetime(target, format=self._format)
 
         # Compute absolute time differences and normalize.
-        deltas = (values - target).abs()
+        deltas = (data[self._field] - target).abs()
         deltas = (deltas.max() - deltas) / deltas.max()
-        deltas = pd.Series(deltas, index=values.index)
 
-        return values, deltas
+        data = data.assign(**{f"similarity_{self._field}": deltas * self._weight})
+        return data.set_index("id")
 
     def delete(self) -> None:
         """Delete all matching data for the field."""

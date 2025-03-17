@@ -26,6 +26,7 @@ class DistanceMatcher(StringMatcher):
     def __init__(
         self,
         field: str,
+        weight: float,
         encryption_key: bytes,
         storage_path: Path,
         algoritm: str,
@@ -38,35 +39,33 @@ class DistanceMatcher(StringMatcher):
 
         self._algoritm = self.ALGORITMS[algoritm]
         self._field = field
+        self._weight = weight
         self._storage = EncryptedStore(field, encryption_key, storage_path)
 
-    def create(self, uuids: pd.Series, values: pd.Series) -> None:
-        """Add values to the matching set, return a list of UUIDs."""
+    def create(self, data: pd.DataFrame) -> None:
+        """Add identifiers and values to the matching set."""
         # Perform basic data preprocessing.
-        values = values.map(self._preprocess)
-
-        # Store values with UUIDs and name.
-        values.index = uuids
-        values.name = self._field
-        self._storage.store(values)
+        data = data.assign(**{self._field: data[self._field].map(self._preprocess)})
+        self._storage.store(data)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Match the target, return scores for the matching set."""
-        values = self._storage.retrieve()
-        if values is None:
-            return None, None
+        data = self._storage.retrieve()
+        if data is None:
+            return None
 
         target = self._preprocess(target)
 
         similarities = cdist(
             [target],
-            values,
+            data[self._field],
             scorer=self._algoritm,
             workers=-1,
         )
-        similarities = pd.Series(similarities[0], index=values.index)
-
-        return values, similarities
+        data = data.assign(
+            **{f"similarity_{self._field}": similarities[0] * self._weight}
+        )
+        return data.set_index("id")
 
     def delete(self) -> None:
         """Delete all matching data for the field."""

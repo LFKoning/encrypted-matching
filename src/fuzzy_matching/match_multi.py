@@ -1,6 +1,5 @@
 """Module for fuzzy matching on multiple characteristics."""
 
-import uuid
 from pathlib import Path
 
 import pandas as pd
@@ -36,27 +35,26 @@ class MultiMatcher:
         storage_path.mkdir(parents=True, exist_ok=True)
 
         self._top_n = top_n
-        self._weights = {
-            field: settings.get("weight", 1.0) for field, settings in config.items()
-        }
 
         self._matchers = {}
         for field, settings in config.items():
             algoritm = settings.get("algoritm").lower()
+            weight = settings.get("weight", 1)
+
             if algoritm in DistanceMatcher.ALGORITMS:
                 self._matchers[field] = DistanceMatcher(
-                    field, encryption_key, storage_path, algoritm
+                    field, weight, encryption_key, storage_path, algoritm
                 )
 
             elif algoritm == "vector":
                 self._matchers[field] = VectorMatcher(
-                    field, encryption_key, storage_path
+                    field, weight, encryption_key, storage_path
                 )
 
             elif algoritm == "timedelta":
                 date_format = settings.get("format", "%d-%m-%Y")
                 self._matchers[field] = TimedeltaMatcher(
-                    field, encryption_key, storage_path, date_format
+                    field, weight, encryption_key, storage_path, date_format
                 )
 
             elif algoritm == "null":
@@ -65,48 +63,39 @@ class MultiMatcher:
             else:
                 raise TypeError(f"Unknown matching algoritm: {algoritm}")
 
-    def create(self, data) -> None:
+    def create(self, data: pd.DataFrame, id_column: str) -> None:
         """Add data to the matching set."""
+        if id_column not in data.columns:
+            raise RuntimeError("Missing ID column {id_column} in the data")
+        data = data.rename(columns={id_column: "id"})
+
         missing = set(self._matchers) - set(data.columns)
         if missing:
-            raise RuntimeError("Missing fields in the data: " + ".".join(missing))
-
-        uuids = pd.Series([self._make_id() for _ in range(len(data))])
+            raise RuntimeError("Missing columns in the data: " + ".".join(missing))
 
         for field, matcher in self._matchers.items():
-            matcher.create(uuids, data[field])
+            matcher.create(data[["id", field]])
 
     def get(self, target: dict) -> pd.DataFrame:
         """Match records from the matching set."""
         results = []
-        similarities = None
 
         # Get similarity scores from the individual matchers.
         for field, matcher in self._matchers.items():
-            values, similarity = matcher.get(target[field])
-
-            if values is None:
+            result = matcher.get(target[field])
+            if result is None:
                 raise RuntimeError(f"No results for {field}; aborting...")
 
-            results.append(values)
+            results.append(result)
 
-            if similarities is None:
-                similarities = similarity * self._weights[field]
-            else:
-                similarities += similarity * self._weights[field]
+        results = pd.concat(results, axis=1, join="inner")
+        columns = [c for c in results.columns if c.startswith("similarity")]
+        results["similarity"] = results[columns].sum(axis=1)
+        results = results.nlargest(self._top_n, columns="similarity")
 
-        top_similar = similarities.nlargest(self._top_n)
-        results = [result[top_similar.index] for result in results]
-        results = pd.concat(results, axis=1)
-
-        return results.assign(similarity=top_similar)
+        return results.sort_values(by="similarity", ascending=False)
 
     def delete(self) -> None:
         """Delete all matching data."""
         for field, matcher in self._matchers.items():
             matcher.delete(field)
-
-    @staticmethod
-    def _make_id() -> str:
-        """Generate a UUID4 identifier."""
-        return uuid.uuid4().hex
