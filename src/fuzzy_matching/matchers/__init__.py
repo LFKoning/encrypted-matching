@@ -1,5 +1,6 @@
 """Module for matching algoritms."""
 
 from .distance import DistanceMatcher
-from .vector import VectorMatcher
 from .null import NullMatcher
+from .timedelta import TimedeltaMatcher
+from .vector import VectorMatcher

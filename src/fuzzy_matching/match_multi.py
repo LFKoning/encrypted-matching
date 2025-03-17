@@ -5,7 +5,12 @@ from pathlib import Path
 
 import pandas as pd
 
-from fuzzy_matching.matchers import DistanceMatcher, VectorMatcher, NullMatcher
+from fuzzy_matching.matchers import (
+    DistanceMatcher,
+    NullMatcher,
+    TimedeltaMatcher,
+    VectorMatcher,
+)
 
 
 class MultiMatcher:
@@ -37,7 +42,7 @@ class MultiMatcher:
 
         self._matchers = {}
         for field, settings in config.items():
-            algoritm = settings["algoritm"]
+            algoritm = settings.get("algoritm").lower()
             if algoritm == "distance":
                 self._matchers[field] = DistanceMatcher(
                     field, encryption_key, storage_path
@@ -47,6 +52,13 @@ class MultiMatcher:
                 self._matchers[field] = VectorMatcher(
                     field, encryption_key, storage_path
                 )
+
+            elif algoritm == "timedelta":
+                date_format = settings.get("format", "%d-%m-%Y")
+                self._matchers[field] = TimedeltaMatcher(
+                    field, encryption_key, storage_path, date_format
+                )
+
             elif algoritm == "null":
                 self._matchers[field] = NullMatcher(field, encryption_key, storage_path)
 
