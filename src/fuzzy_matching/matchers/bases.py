@@ -3,12 +3,29 @@
 import re
 import string
 import unicodedata
+from pathlib import Path
 
 import pandas as pd
+
+from fuzzy_matching.storage import EncryptedStore
 
 
 class BaseMatcher:
     """Base class for matchers."""
+
+    def __init__(
+        self,
+        field: str,
+        encryption_key: bytes,
+        storage_path: Path,
+        settings: dict = None,
+    ) -> None:
+        self._field = field
+        self._weight = settings.get("weight", 1.0)
+        self._settings = settings or {}
+
+        storage_path = storage_path / self._make_filename()
+        self._storage = EncryptedStore(encryption_key, storage_path)
 
     def _flatten(self, items):
         for item in items:
@@ -26,6 +43,15 @@ class BaseMatcher:
     def _ungroup_ids(self, data: pd.DataFrame) -> pd.DataFrame:
         """Explode grouped identifiers into rows."""
         return data.explode(column="id")
+
+    def _make_filename(self, extension="dat") -> str:
+        """Create a filename from a field name."""
+        field = self._field.lower().strip().replace(" ", "_")
+        field = "".join(
+            [char for char in field if char in string.ascii_lowercase + "_-"]
+        )
+
+        return f"{self.__class__.__name__.lower()}_{field}.{extension}"
 
 
 class StringMixin:

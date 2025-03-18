@@ -36,33 +36,26 @@ class MultiMatcher:
 
         self._top_n = top_n
 
+        # Define available matching algoritms.
+        matchers = {algo: DistanceMatcher for algo in DistanceMatcher.ALGORITMS}
+        matchers |= {
+            "vector": VectorMatcher,
+            "timedelta": TimedeltaMatcher,
+            "null": NullMatcher,
+        }
+
         self._matchers = {}
         for field, settings in config.items():
             algoritm = settings.get("algoritm").lower()
-            weight = settings.get("weight", 1)
-            dedupe = settings.get("dedupe", False)
-
-            if algoritm in DistanceMatcher.ALGORITMS:
-                self._matchers[field] = DistanceMatcher(
-                    field, weight, dedupe, encryption_key, storage_path, algoritm
+            if algoritm not in matchers:
+                raise ValueError(
+                    f"Unknown matching algoritm: {algoritm}."
+                    "Available matchers: " + ", ".join(matchers)
                 )
 
-            elif algoritm == "vector":
-                self._matchers[field] = VectorMatcher(
-                    field, weight, encryption_key, storage_path
-                )
-
-            elif algoritm == "timedelta":
-                date_format = settings.get("format", "%d-%m-%Y")
-                self._matchers[field] = TimedeltaMatcher(
-                    field, weight, encryption_key, storage_path, date_format
-                )
-
-            elif algoritm == "null":
-                self._matchers[field] = NullMatcher(field, encryption_key, storage_path)
-
-            else:
-                raise TypeError(f"Unknown matching algoritm: {algoritm}")
+            self._matchers[field] = matchers[algoritm](
+                field, encryption_key, storage_path, settings
+            )
 
     def create(self, data: pd.DataFrame, id_column: str) -> None:
         """Add data to the matching set."""

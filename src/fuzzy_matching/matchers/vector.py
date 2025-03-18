@@ -7,24 +7,25 @@ import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-from .bases import StringMixin
-from fuzzy_matching.storage import EncryptedStore, VectorStore
+from fuzzy_matching.storage import VectorStore
+
+from .bases import BaseMatcher, StringMixin
 
 
-class VectorMatcher(StringMixin):
+class VectorMatcher(BaseMatcher, StringMixin):
     """Fuzzy matching using cosine similarity between vectors."""
 
     def __init__(
         self,
         field: str,
-        weight: float,
         encryption_key: bytes,
         storage_path: Path,
+        settings: dict = None,
     ):
-        self._field = field
-        self._weight = weight
-        self._vector_store = VectorStore(field, storage_path)
-        self._value_store = EncryptedStore(field, encryption_key, storage_path)
+        super().__init__(field, encryption_key, storage_path, settings)
+
+        storage_path = storage_path / self._make_filename(".npz")
+        self._vector_storage = VectorStore(storage_path)
 
         self._vectorizer = HashingVectorizer(
             encoding="utf8",
@@ -39,18 +40,18 @@ class VectorMatcher(StringMixin):
         data = data.assign(**{self._field: data[self._field].map(self._preprocess)})
 
         # Store values with UUIDs and name.
-        existing = self._value_store.load()
+        existing = self._storage.load()
         data = pd.concat([existing, data])
-        self._value_store.store(data)
+        self._storage.store(data)
 
         # Convert to vectors and store.
         vectors = self._vectorizer.fit_transform(data[self._field])
-        self._vector_store.store(vectors)
+        self._vector_storage.store(vectors)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Search values in the vector space."""
         # Load the encrypted values.
-        data = self._value_store.load()
+        data = self._storage.load()
         if data is None:
             return None
 
@@ -58,7 +59,7 @@ class VectorMatcher(StringMixin):
 
         # Compute vector similarities.
         target_vector = self._vectorizer.fit_transform([target])
-        vectors = self._vector_store.load()
+        vectors = self._vector_storage.load()
         similarities = cosine_similarity(target_vector, vectors)[0]
 
         data = data.assign(**{f"similarity_{self._field}": similarities * self._weight})
@@ -66,5 +67,5 @@ class VectorMatcher(StringMixin):
 
     def delete(self) -> None:
         """Delete all matching data for the field."""
-        self._vector_store.delete()
-        self._value_store.delete()
+        self._storage.delete()
+        self._vector_storage.delete()

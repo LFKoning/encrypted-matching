@@ -5,24 +5,21 @@ from typing import Tuple
 
 import pandas as pd
 
-from fuzzy_matching.storage import EncryptedStore
+from .bases import BaseMatcher
 
 
-class TimedeltaMatcher:
+class TimedeltaMatcher(BaseMatcher):
     """Class for matching time differences."""
 
     def __init__(
         self,
         field: str,
-        weight: float,
         encryption_key: bytes,
         storage_path: Path,
-        date_format: str,
+        settings: dict = None,
     ):
-        self._field = field
-        self._weight = weight
-        self._format = date_format
-        self._storage = EncryptedStore(field, encryption_key, storage_path)
+        super().__init__(field, encryption_key, storage_path, settings)
+        self._format = settings.get("date_format", "%d-%m-%Y")
 
     def create(self, data) -> None:
         """Store encrypted datetime values."""

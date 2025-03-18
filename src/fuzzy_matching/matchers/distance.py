@@ -4,14 +4,12 @@ from pathlib import Path
 from typing import Tuple
 
 import pandas as pd
-
-from rapidfuzz.distance.Levenshtein import normalized_similarity as levenshtein
 from rapidfuzz.distance.DamerauLevenshtein import normalized_similarity as damerau
+from rapidfuzz.distance.Levenshtein import normalized_similarity as levenshtein
 from rapidfuzz.distance.OSA import normalized_similarity as optimal_alignment
 from rapidfuzz.process import cdist
 
 from .bases import BaseMatcher, StringMixin
-from fuzzy_matching.storage import EncryptedStore
 
 
 class DistanceMatcher(BaseMatcher, StringMixin):
@@ -26,23 +24,13 @@ class DistanceMatcher(BaseMatcher, StringMixin):
     def __init__(
         self,
         field: str,
-        weight: float,
-        dedupe: bool,
         encryption_key: bytes,
         storage_path: Path,
-        algoritm: str,
+        settings: dict = None,
     ) -> None:
-        if algoritm.lower() not in self.ALGORITMS:
-            raise ValueError(
-                f"Unknown distance algoritm: {algoritm}."
-                "Valid options are: " + ", ".join(self.ALGORITMS)
-            )
-
-        self._algoritm = self.ALGORITMS[algoritm]
-        self._field = field
-        self._weight = weight
-        self._dedupe = dedupe
-        self._storage = EncryptedStore(field, encryption_key, storage_path)
+        super().__init__(field, encryption_key, storage_path, settings)
+        self._algoritm = self.ALGORITMS[settings["algoritm"].lower()]
+        self._dedupe = settings.get("dedupe", False)
 
     def create(self, data: pd.DataFrame) -> None:
         """Add identifiers and values to the matching set."""
