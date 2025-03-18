@@ -22,11 +22,13 @@ class NullMatcher:
 
     def create(self, data: pd.DataFrame) -> None:
         """Add values to the matching set, return a list of UUIDs."""
+        existing = self._storage.load()
+        data = pd.concat([existing, data])
         self._storage.store(data)
 
     def get(self, _: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Match the target, return scores for the matching set."""
-        data = self._storage.retrieve()
+        data = self._storage.load()
         if data is None:
             return None
 

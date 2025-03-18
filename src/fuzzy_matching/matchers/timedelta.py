@@ -29,11 +29,14 @@ class TimedeltaMatcher:
         data = data.assign(
             **{self._field: pd.to_datetime(data[self._field], format=self._format)}
         )
+
+        existing = self._storage.load()
+        data = pd.concat([existing, data])
         self._storage.store(data)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Search names in the vector space."""
-        data = self._storage.retrieve()
+        data = self._storage.load()
         if data is None:
             return None
 

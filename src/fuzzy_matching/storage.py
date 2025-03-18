@@ -29,26 +29,16 @@ class EncryptedStore(Storage):
     def __init__(self, field: str, encryption_key: bytes, storage_path: Path) -> None:
         self._storage_file = storage_path / self._make_filename(field)
         self._encryptor = AESGCM4Encryptor(encryption_key)
-        self._data = self._load()
 
-    def retrieve(self) -> pd.Series | pd.DataFrame | None:
-        """Return encrypted data as a pandas data structure."""
-        return self._data
-
-    def store(self, values: pd.Series | pd.DataFrame) -> None:
+    def store(self, data: pd.Series | pd.DataFrame) -> None:
         """Encrypt and store pandas data structures."""
-        if self._data is None:
-            self._data = values
-        else:
-            self._data = pd.concat([self._data, values])
+        byte_data = io.BytesIO()
+        data.to_pickle(byte_data)
 
-        data = io.BytesIO()
-        self._data.to_pickle(data)
-
-        data = self._encryptor.encrypt(data.getbuffer())
+        byte_data = self._encryptor.encrypt(byte_data.getbuffer())
 
         with open(self._storage_file, "wb") as data_file:
-            data_file.write(data)
+            data_file.write(byte_data)
 
     def delete(self) -> None:
         """Delete all stored data."""
@@ -57,7 +47,7 @@ class EncryptedStore(Storage):
         except FileNotFoundError:
             pass
 
-    def _load(self) -> pd.Series | pd.DataFrame | None:
+    def load(self) -> pd.Series | pd.DataFrame | None:
         """Load and decrypt pandas data structures."""
         try:
             with open(self._storage_file, "rb") as data_file:
@@ -78,19 +68,10 @@ class VectorStore(Storage):
 
     def __init__(self, field: str, storage_path: Path) -> None:
         self._storage_file = storage_path / self._make_filename(field, "npz")
-        self._data = self._load()
-
-    def retrieve(self) -> sparse.csr_matrix | None:
-        """Return vectors as a sparse matrix."""
-        return self._data
 
     def store(self, vectors):
         """Store vectors to disk."""
-        if self._data is not None:
-            self._data = sparse.vstack([self._data, vectors])
-        else:
-            self._data = vectors
-        sparse.save_npz(self._storage_file, self._data)
+        sparse.save_npz(self._storage_file, vectors)
 
     def delete(self) -> None:
         """Delete all stored data."""
@@ -99,7 +80,7 @@ class VectorStore(Storage):
         except FileNotFoundError:
             pass
 
-    def _load(self) -> sparse.csr_matrix | None:
+    def load(self) -> sparse.csr_matrix | None:
         """Load vectors from disk."""
         try:
             return sparse.load_npz(self._storage_file)

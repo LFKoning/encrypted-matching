@@ -10,11 +10,11 @@ from rapidfuzz.distance.DamerauLevenshtein import normalized_similarity as damer
 from rapidfuzz.distance.OSA import normalized_similarity as optimal_alignment
 from rapidfuzz.process import cdist
 
-from .base_string import StringMatcher
+from .bases import BaseMatcher, StringMixin
 from fuzzy_matching.storage import EncryptedStore
 
 
-class DistanceMatcher(StringMatcher):
+class DistanceMatcher(BaseMatcher, StringMixin):
     """Module for fuzzy matching using edit distances."""
 
     ALGORITMS = {
@@ -27,6 +27,7 @@ class DistanceMatcher(StringMatcher):
         self,
         field: str,
         weight: float,
+        dedupe: bool,
         encryption_key: bytes,
         storage_path: Path,
         algoritm: str,
@@ -40,17 +41,21 @@ class DistanceMatcher(StringMatcher):
         self._algoritm = self.ALGORITMS[algoritm]
         self._field = field
         self._weight = weight
+        self._dedupe = dedupe
         self._storage = EncryptedStore(field, encryption_key, storage_path)
 
     def create(self, data: pd.DataFrame) -> None:
         """Add identifiers and values to the matching set."""
         # Perform basic data preprocessing.
         data = data.assign(**{self._field: data[self._field].map(self._preprocess)})
+
+        existing = self._storage.load()
+        data = pd.concat([existing, data])
         self._storage.store(data)
 
     def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
         """Match the target, return scores for the matching set."""
-        data = self._storage.retrieve()
+        data = self._storage.load()
         if data is None:
             return None
 

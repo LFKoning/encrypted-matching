@@ -40,10 +40,11 @@ class MultiMatcher:
         for field, settings in config.items():
             algoritm = settings.get("algoritm").lower()
             weight = settings.get("weight", 1)
+            dedupe = settings.get("dedupe", False)
 
             if algoritm in DistanceMatcher.ALGORITMS:
                 self._matchers[field] = DistanceMatcher(
-                    field, weight, encryption_key, storage_path, algoritm
+                    field, weight, dedupe, encryption_key, storage_path, algoritm
                 )
 
             elif algoritm == "vector":
