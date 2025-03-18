@@ -30,7 +30,6 @@ class DistanceMatcher(BaseMatcher, StringMixin):
     ) -> None:
         super().__init__(field, encryption_key, storage_path, settings)
         self._algoritm = self.ALGORITMS[settings["algoritm"].lower()]
-        self._dedupe = settings.get("dedupe", False)
 
     def create(self, data: pd.DataFrame) -> None:
         """Add identifiers and values to the matching set."""
@@ -48,13 +47,13 @@ class DistanceMatcher(BaseMatcher, StringMixin):
             return None
 
         target = self._preprocess(target)
-
         similarities = cdist(
             [target],
             data[self._field],
             scorer=self._algoritm,
             workers=-1,
         )
+
         data = data.assign(
             **{f"similarity_{self._field}": similarities[0] * self._weight}
         )

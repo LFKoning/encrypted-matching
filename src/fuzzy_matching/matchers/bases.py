@@ -5,8 +5,6 @@ import string
 import unicodedata
 from pathlib import Path
 
-import pandas as pd
-
 from fuzzy_matching.storage import EncryptedStore
 
 
@@ -26,23 +24,6 @@ class BaseMatcher:
 
         storage_path = storage_path / self._make_filename()
         self._storage = EncryptedStore(encryption_key, storage_path)
-
-    def _flatten(self, items):
-        for item in items:
-            if isinstance(item, (list, tuple)):
-                yield from self._flatten(item)
-            else:
-                yield item
-
-    def _group_ids(self, data: pd.DataFrame, field: str) -> pd.DataFrame:
-        """Group identifiers that share the same value."""
-        return data.groupby(field, as_index=False).agg(
-            lambda ids: list(self._flatten(ids))
-        )
-
-    def _ungroup_ids(self, data: pd.DataFrame) -> pd.DataFrame:
-        """Explode grouped identifiers into rows."""
-        return data.explode(column="id")
 
     def _make_filename(self, extension="dat") -> str:
         """Create a filename from a field name."""
