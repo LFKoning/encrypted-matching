@@ -24,7 +24,7 @@ class VectorMatcher(BaseMatcher, StringMixin):
     ):
         super().__init__(field, encryption_key, storage_path, settings)
 
-        storage_path = storage_path / self._make_filename(".npz")
+        storage_path = storage_path / self._make_filename("npz")
         self._vector_storage = VectorStore(storage_path)
 
         self._vectorizer = HashingVectorizer(
