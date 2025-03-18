@@ -1,7 +1,6 @@
 """Module for matching time differences."""
 
 from pathlib import Path
-from typing import Tuple
 
 import pandas as pd
 
@@ -9,7 +8,19 @@ from .bases import BaseMatcher
 
 
 class TimedeltaMatcher(BaseMatcher):
-    """Class for matching time differences."""
+    """Class for matching time differences.
+
+    Parameters
+    ----------
+    field : str
+        Name of the field used in matching.
+    encryption_key : bytes
+        Encryption key for storing data, provided as bytes.
+    storage_path : pathlib.Path
+        Path to a file to store the data in.
+    settings : dict, optional
+        Additional settings for the algoritm.
+    """
 
     def __init__(
         self,
@@ -22,7 +33,13 @@ class TimedeltaMatcher(BaseMatcher):
         self._format = settings.get("date_format", "%d-%m-%Y")
 
     def create(self, data) -> None:
-        """Store encrypted datetime values."""
+        """Add entities to the matching set.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            DataFrame with entities to add to the matching set.
+        """
         data = data.assign(
             **{self._field: pd.to_datetime(data[self._field], format=self._format)}
         )
@@ -31,8 +48,19 @@ class TimedeltaMatcher(BaseMatcher):
         data = pd.concat([existing, data])
         self._storage.store(data)
 
-    def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
-        """Search names in the vector space."""
+    def get(self, target: str) -> pd.DataFrame:
+        """Return all entities and their similarity to the target.
+
+        Parameters
+        ----------
+        target : str
+            Target string to match against.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame of entities and their similarity scores.
+        """
         data = self._storage.load()
         if data is None:
             return None

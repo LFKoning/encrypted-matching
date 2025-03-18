@@ -20,15 +20,15 @@ class MultiMatcher:
     top_n : int
         Number of results to return.
     config : dict
-        Dict specifying field name and matching algoritm.
-    encryption_key : str
-        Encryption key to use for storing data.
+        Dict of field names and matching settings.
+    encryption_key : bytes
+        Encryption key for storing data, provided as bytes.
     storage_path : str, default="storage"
         Folder to store data in.
     """
 
     def __init__(
-        self, top_n, config, encryption_key: str, storage_path="storage"
+        self, top_n, config, encryption_key: bytes, storage_path="storage"
     ) -> None:
         # Create the storage path if needed.
         storage_path = Path(storage_path)
@@ -58,7 +58,16 @@ class MultiMatcher:
             )
 
     def create(self, data: pd.DataFrame, id_column: str) -> None:
-        """Add data to the matching set."""
+        """Add data to the matching set.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            Pandas DataFrame with data to add to the matching set.
+        id_column : str
+            Name of the column with entity identifiers.
+            Note: Entitity dentifiers must be unique!
+        """
         if id_column not in data.columns:
             raise RuntimeError("Missing ID column {id_column} in the data")
         data = data.rename(columns={id_column: "id"})
@@ -71,7 +80,13 @@ class MultiMatcher:
             matcher.create(data[["id", field]])
 
     def get(self, target: dict) -> pd.DataFrame:
-        """Match records from the matching set."""
+        """Match records from the matching set.
+
+        Parameters
+        ----------
+        target : dict
+            Search query as dict of field : value pairs.
+        """
         results = []
 
         # Get similarity scores from the individual matchers.

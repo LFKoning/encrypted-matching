@@ -1,7 +1,6 @@
 """Module for fuzzy matching using cosine similarity between vectors."""
 
 from pathlib import Path
-from typing import Tuple
 
 import pandas as pd
 from sklearn.feature_extraction.text import HashingVectorizer
@@ -13,7 +12,19 @@ from .bases import BaseMatcher, StringMixin
 
 
 class VectorMatcher(BaseMatcher, StringMixin):
-    """Fuzzy matching using cosine similarity between vectors."""
+    """Fuzzy matching using cosine similarity between vectors.
+
+    Parameters
+    ----------
+    field : str
+        Name of the field used in matching.
+    encryption_key : bytes
+        Encryption key for storing data, provided as bytes.
+    storage_path : pathlib.Path
+        Path to a file to store the data in.
+    settings : dict, optional
+        Additional settings for the algoritm.
+    """
 
     def __init__(
         self,
@@ -35,7 +46,13 @@ class VectorMatcher(BaseMatcher, StringMixin):
         )
 
     def create(self, data: pd.DataFrame) -> None:
-        """Store encrypted and vectorized values."""
+        """Add entities to the matching set.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            DataFrame with entities to add to the matching set.
+        """
         # Perform basic data preprocessing.
         data = data.assign(**{self._field: data[self._field].map(self._preprocess)})
 
@@ -48,8 +65,19 @@ class VectorMatcher(BaseMatcher, StringMixin):
         vectors = self._vectorizer.fit_transform(data[self._field])
         self._vector_storage.store(vectors)
 
-    def get(self, target: str) -> Tuple[pd.DataFrame, pd.Series]:
-        """Search values in the vector space."""
+    def get(self, target: str) -> pd.DataFrame:
+        """Return all entities and their similarity to the target.
+
+        Parameters
+        ----------
+        target : str
+            Target string to match against.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame of entities and their similarity scores.
+        """
         # Load the encrypted values.
         data = self._storage.load()
         if data is None:

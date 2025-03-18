@@ -1,4 +1,4 @@
-"""Module for encrypted value storage"""
+"""Module for encrypted storage of pandas data structures."""
 
 import io
 from pathlib import Path
@@ -10,14 +10,28 @@ from fuzzy_matching.encryption import AESGCM4Encryptor
 
 
 class EncryptedStore:
-    """Class for encrypted value storage."""
+    """Class for encrypted storage of pandas data structures.
+
+    Parameters
+    ----------
+    encryption_key : bytes
+        Encryption key for storing data, provided as bytes.
+    storage_path : str, default="storage"
+        Folder to store data in.
+    """
 
     def __init__(self, encryption_key: bytes, storage_path: Path) -> None:
         self._storage_path = storage_path
         self._encryptor = AESGCM4Encryptor(encryption_key)
 
     def store(self, data: pd.Series | pd.DataFrame) -> None:
-        """Encrypt and store pandas data structures."""
+        """Encrypt and store a pandas data structure.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame or pandas.Series
+            Data structure to store to file.
+        """
         byte_data = io.BytesIO()
         data.to_pickle(byte_data)
 
@@ -26,15 +40,14 @@ class EncryptedStore:
         with open(self._storage_path, "wb") as data_file:
             data_file.write(byte_data)
 
-    def delete(self) -> None:
-        """Delete all stored data."""
-        try:
-            self._storage_file.unlink()
-        except FileNotFoundError:
-            pass
-
     def load(self) -> pd.Series | pd.DataFrame | None:
-        """Load and decrypt pandas data structures."""
+        """Load and decrypt a pandas data structure.
+
+        Returns
+        -------
+        pandas.DataFrame or pandas.Series
+            The decrypted data structure.
+        """
         try:
             with open(self._storage_path, "rb") as data_file:
                 raw_data = data_file.read()
@@ -48,26 +61,51 @@ class EncryptedStore:
             print(f"Warning: Cannot find file: {self._storage_path}")
             return None
 
+    def delete(self) -> None:
+        """Delete all stored data."""
+        try:
+            self._storage_file.unlink()
+        except FileNotFoundError:
+            pass
+
 
 class VectorStore:
-    """Class for storing sparse vector matrices."""
+    """Class for storing sparse vector matrices.
+
+    Parameters
+    ----------
+    storage_path : pathlib.Path
+        Path to a file to store the data in.
+    """
 
     def __init__(self, storage_path: Path) -> None:
         self._storage_path = storage_path
 
-    def store(self, vectors):
-        """Store vectors to disk."""
+    def store(self, vectors: sparse.csr_matrix) -> None:
+        """Store vectors to disk.
+
+        Parameters
+        ----------
+        vectors : scipy.sparse.csr_matrix
+            Sparse matrix of vectors.
+        """
         sparse.save_npz(self._storage_path, vectors)
 
     def delete(self) -> None:
-        """Delete all stored data."""
+        """Delete all stored vectors."""
         try:
             self._storage_path.unlink()
         except FileNotFoundError:
             pass
 
     def load(self) -> sparse.csr_matrix | None:
-        """Load vectors from disk."""
+        """Load vectors from disk.
+
+        Returns
+        -------
+        scipy.sparse.csr_matrix
+            Sparse matrix of vectors.
+        """
         try:
             return sparse.load_npz(self._storage_path)
         except FileNotFoundError:

@@ -9,13 +9,25 @@ class NullMatcher(BaseMatcher):
     """Module for fields not used in matching."""
 
     def create(self, data: pd.DataFrame) -> None:
-        """Add values to the matching set, return a list of UUIDs."""
+        """Add entities to the matching set.
+
+        Parameters
+        ----------
+        data : pandas.DataFrame
+            DataFrame with entities to add to the matching set.
+        """
         existing = self._storage.load()
         data = pd.concat([existing, data])
         self._storage.store(data)
 
     def get(self, _: str) -> pd.DataFrame:
-        """Match the target, return scores for the matching set."""
+        """Return all entities and their similarity to the target.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame of entities and their similarity scores.
+        """
         data = self._storage.load()
         if data is None:
             return None
