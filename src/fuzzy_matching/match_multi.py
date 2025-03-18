@@ -69,7 +69,7 @@ class MultiMatcher:
             Note: Entitity dentifiers must be unique!
         """
         if id_column not in data.columns:
-            raise RuntimeError("Missing ID column {id_column} in the data")
+            raise RuntimeError(f"Missing ID column {id_column!r} in the data")
         data = data.rename(columns={id_column: "id"})
 
         missing = set(self._matchers) - set(data.columns)
