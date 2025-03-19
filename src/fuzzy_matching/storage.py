@@ -21,6 +21,7 @@ class EncryptedStore:
     """
 
     def __init__(self, encryption_key: bytes, storage_path: Path) -> None:
+        self._data = None
         self._storage_path = storage_path
         self._encryptor = AESGCM4Encryptor(encryption_key)
 
@@ -32,6 +33,8 @@ class EncryptedStore:
         data : pandas.DataFrame or pandas.Series
             Data structure to store to file.
         """
+        self._data = data
+
         byte_data = io.BytesIO()
         data.to_pickle(byte_data)
 
@@ -48,6 +51,9 @@ class EncryptedStore:
         pandas.DataFrame or pandas.Series
             The decrypted data structure.
         """
+        if self._data is not None:
+            return self._data
+
         try:
             with open(self._storage_path, "rb") as data_file:
                 raw_data = data_file.read()
@@ -55,7 +61,8 @@ class EncryptedStore:
             raw_data = self._encryptor.decrypt(raw_data)
 
             raw_data = io.BytesIO(raw_data)
-            return pd.read_pickle(raw_data)
+            self._data = pd.read_pickle(raw_data)
+            return self._data
 
         except FileNotFoundError:
             print(f"Warning: Cannot find file: {self._storage_path}")
@@ -64,9 +71,10 @@ class EncryptedStore:
     def delete(self) -> None:
         """Delete all stored data."""
         try:
-            self._storage_file.unlink()
+            self._storage_path.unlink()
         except FileNotFoundError:
             pass
+        self._data = None
 
 
 class VectorStore:
@@ -79,6 +87,7 @@ class VectorStore:
     """
 
     def __init__(self, storage_path: Path) -> None:
+        self._vectors = None
         self._storage_path = storage_path
 
     def store(self, vectors: sparse.csr_matrix) -> None:
@@ -91,13 +100,6 @@ class VectorStore:
         """
         sparse.save_npz(self._storage_path, vectors)
 
-    def delete(self) -> None:
-        """Delete all stored vectors."""
-        try:
-            self._storage_path.unlink()
-        except FileNotFoundError:
-            pass
-
     def load(self) -> sparse.csr_matrix | None:
         """Load vectors from disk.
 
@@ -106,8 +108,21 @@ class VectorStore:
         scipy.sparse.csr_matrix
             Sparse matrix of vectors.
         """
+        if self._vectors is not None:
+            return self._vectors
+
         try:
-            return sparse.load_npz(self._storage_path)
+            self._vectors = sparse.load_npz(self._storage_path)
+            return self._vectors
+
         except FileNotFoundError:
             print(f"Warning: Cannot find file: {self._storage_path}")
             return None
+
+    def delete(self) -> None:
+        """Delete all stored vectors."""
+        try:
+            self._storage_path.unlink()
+        except FileNotFoundError:
+            pass
+        self._vectors = None
